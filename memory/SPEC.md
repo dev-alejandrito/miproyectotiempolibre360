@@ -21,3 +21,6 @@ Supabase Auth (Lovable Cloud), correo + contraseña. Registro sin enlace de conf
 
 ## Pendiente manual
 Ver `/app/frontend/CONFIGURACION_PAGOS.md` (aplicar SQL 0005 en Lovable, secretos de Stripe, webhook).
+
+## Avisos de seguridad por correo
+Migración 0007: `security_events` (outbox) y `known_devices`. Triggers: `auth.users` (cambio de encrypted_password → password_changed) y `auth.sessions` (user agent nuevo → new_device; el primer dispositivo no avisa). `src/server/tl/security.server.js` envía vía Gmail API con token del conector Emergent (`EMERGENT_LLM_KEY` + `GMAIL_CONNECTION_ID`, cuenta alejandroortizcalles@gmail.com). Envío: `POST /security/flush` (tras login) y `GET /me/dashboard`, con tope de 3–4 s; reclamo atómico, un correo por evento, máx. 5 intentos.

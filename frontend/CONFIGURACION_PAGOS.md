@@ -38,3 +38,9 @@ Alumno solicita → instructor acepta → alumno paga en Stripe Checkout (cargo 
 → Stripe confirma (webhook firmado o consulta del servidor a Stripe) → reservación «Confirmada».
 Cancelación antes del inicio o resolución de disputa como «cancelada» → reembolso total en Stripe con
 `reverse_transfer` y `refund_application_fee` (comisión revertida). Sin cargos adicionales.
+
+## Avisos de seguridad por correo (Gmail)
+1. Aplica `drizzle/migrations/0007_avisos_seguridad.sql` (triggers que registran cambio de contraseña y navegador nuevo; nunca bloquean el acceso).
+2. Agrega en Lovable → Cloud → Secrets: `EMERGENT_LLM_KEY` (tu clave personal de Emergent) y `GMAIL_CONNECTION_ID = 16bd2a94-852c-47f3-b40d-d46e84c126b5`.
+   La autorización OAuth de Gmail la guarda Emergent; la app solo pide un token temporal desde el servidor.
+3. Remitente: la cuenta conectada (alejandroortizcalles@gmail.com). Los avisos se envían al iniciar sesión o al abrir el panel; si Gmail falla se reintentan (máx. 5).

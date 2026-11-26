@@ -5,6 +5,7 @@ import * as M from "./main.server.js";
 import * as X from "./ext.server.js";
 import * as P from "./profile.server.js";
 import * as PAY from "./pay.server.js";
+import { flushSoon } from "./security.server.js";
 
 // [método, patrón, nivel ("open" | "auth" | "staff" | "admin"), handler(ctx)]
 const ROUTES = [
@@ -13,7 +14,8 @@ const ROUTES = [
   ["GET", "/public/community", "open", () => M.publicCommunity()],
   ["POST", "/public/contact", "open", ({ body }) => M.contact(body)],
 
-  ["GET", "/me/dashboard", "auth", ({ me }) => M.dashboard(me)],
+  ["GET", "/me/dashboard", "auth", async ({ me }) => { await flushSoon(3000); return M.dashboard(me); }],
+  ["POST", "/security/flush", "auth", async () => { await flushSoon(4000); return { ok: true }; }],
   ["POST", "/me/reminders", "auth", ({ me }) => M.reminders(me)],
   ["GET", "/matches", "auth", async ({ me }) => ({ items: await M.matches(me) })],
   ["GET", "/people", "auth", async ({ me, query }) => ({ items: await M.peopleSearch(me, query) })],

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { Navigate, useLocation } from "./router";
 import { supabase } from "@/integrations/supabase/client";
-import { setAuthRecord } from "./pb";
+import { api, setAuthRecord } from "./pb";
 import { tlLoginCheck, tlLoginResult } from "./tl-api.functions";
 
 const Ctx = createContext(null);
@@ -96,6 +96,8 @@ export function AuthProvider({ children }) {
     await tlLoginResult({ data: { email, ok: true } }).catch(() => {});
     setIdle(false);
     const rec = await apply(data.session);
+    // Envía en segundo plano los avisos de seguridad pendientes; si falla, no afecta el inicio de sesión.
+    api("/security/flush", { method: "POST", body: {} }).catch(() => {});
     if (!rec) { const e = new Error("Tu cuenta está suspendida o no está disponible. Contacta con la comunidad."); e.status = 403; throw e; }
     return rec;
   }, [apply]);
