@@ -1,5 +1,15 @@
 # TIEMPO LIBRE 360 — configuración pendiente (manual, desde Lovable)
 
+## 0. Registro sin confirmación de correo + cuenta administradora (en este orden)
+1. Aplica `drizzle/migrations/0006_admin_seguro_sin_confirmacion.sql` (desactiva el admin automático por correo).
+2. Lovable → More → Users → Settings → Email → activa **Auto-confirm email**. Mantén activo el inicio con correo.
+   En la misma sección revisa que la URL del sitio y las Redirect URLs incluyan `https://TU-DOMINIO/restablecer`.
+3. Cuenta admin: si `alejandroortizcalles@gmail.com` no existe, regístrala en `/registro`. Si ya existía, usa
+   «¿Olvidaste tu contraseña?» y fija una contraseña nueva (prueba que el correo es tuyo y cierra otras sesiones).
+4. Inicia sesión una vez y luego, en el editor SQL de Lovable Cloud, ejecuta:
+   `select public.tl_promote_admin('alejandroortizcalles@gmail.com');`
+5. Vuelve a iniciar sesión: verás «Panel de gestión». Para retirar el rol: `select public.tl_revoke_admin('correo');`
+
 ## 1. Aplicar la migración SQL (obligatorio)
 Archivo: `drizzle/migrations/0005_perfil_verificacion_pagos.sql` (aditiva; no borra datos).
 Crea: columnas de perfil (`avatar_path`, `cover_path`, `theme`, `interests`), bucket público `perfiles`,

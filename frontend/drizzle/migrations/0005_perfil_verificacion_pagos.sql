@@ -3,22 +3,7 @@
 -- Aplícala completa desde Lovable (Cloud → SQL / migraciones). Se puede ejecutar más de una vez sin duplicar nada.
 
 -- ---------- 1. Cuenta administradora ----------
--- El rol admin se otorga automáticamente SOLO a alejandroortizcalles@gmail.com (con correo confirmado).
-create or replace function public.tl_grant_owner_admin(p_uid uuid, p_email text) returns void
-language plpgsql security definer set search_path = public as $$
-begin
-  if lower(coalesce(p_email, '')) = 'alejandroortizcalles@gmail.com' then
-    insert into public.user_roles(user_id, role) values (p_uid, 'admin') on conflict (user_id, role) do nothing;
-  end if;
-end $$;
-revoke all on function public.tl_grant_owner_admin(uuid, text) from public, anon, authenticated;
-
--- Si la cuenta ya existe y su correo está confirmado, recibe el rol admin ahora (no cambia contraseña ni datos).
-insert into public.user_roles(user_id, role)
-select u.id, 'admin' from auth.users u
-where lower(u.email) = 'alejandroortizcalles@gmail.com' and u.email_confirmed_at is not null
-on conflict (user_id, role) do nothing;
-
+-- El rol admin YA NO se otorga automáticamente por correo (ver 0006_admin_seguro_sin_confirmacion.sql).
 -- Solo una cuenta administradora: se retira el rol admin a la cuenta anterior (la cuenta y sus datos se conservan).
 delete from public.user_roles
 where role = 'admin' and user_id in (select id from auth.users where lower(email) = 'ortizcallesjoahann@gmail.com');

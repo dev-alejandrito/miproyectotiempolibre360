@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "@/lib/router";
 import { Alert, Field, Logo } from "../../components/ui";
-import { useAuth } from "../../lib/auth";
+import { useAuth, openedFromRecoveryLink } from "../../lib/auth";
 import { errMsg } from "../../lib/pb";
 import { supabase } from "@/integrations/supabase/client";
 import PasswordInput from "../../components/PasswordInput";
@@ -71,7 +71,7 @@ export function Register() {
     setState({ busy: true, error: "" });
     try {
       const r = await register({ name: f.name.trim(), email: f.email.trim(), password: f.password });
-      if (r?.confirmed) nav("/app/perfil", { replace: true });
+      if (r?.confirmed) nav("/app/editar-perfil", { replace: true });
       else { setSent(f.email.trim()); setState({ busy: false, error: "" }); }
     }
     catch (err) { setState({ busy: false, error: errMsg(err) }); }
@@ -123,10 +123,12 @@ export function ResetPassword() {
   const nav = useNavigate();
   const [ready, setReady] = useState(false);
   const [f, setF] = useState({ password: "", confirm: "" }); const [state, setState] = useState({ busy: false, error: "", ok: false });
-  // El enlace del correo abre una sesión temporal de recuperación.
+  // Solo el enlace de recuperación del correo (evento PASSWORD_RECOVERY) habilita el cambio de contraseña:
+  // una sesión normal abierta no basta, así nadie con un equipo desbloqueado puede cambiarla sin el correo.
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => { if (event === "PASSWORD_RECOVERY" || session) setReady(true); });
-    supabase.auth.getSession().then(({ data }) => { if (data.session) setReady(true); });
+    const fromLink = openedFromRecoveryLink();
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => { if (event === "PASSWORD_RECOVERY" || (fromLink && session)) setReady(true); });
+    supabase.auth.getSession().then(({ data }) => { if (fromLink && data.session) setReady(true); });
     const t = setTimeout(() => setReady((r) => r || false), 4000);
     return () => { sub.subscription.unsubscribe(); clearTimeout(t); };
   }, []);
@@ -138,7 +140,8 @@ export function ResetPassword() {
     const { error } = await supabase.auth.updateUser({ password: f.password });
     if (error) return setState({ busy: false, error: /session|expired|invalid/i.test(error.message || "") ? "El enlace no es válido, ya se usó o caducó. Solicita uno nuevo." : "No se pudo cambiar la contraseña: elige una más segura (mínimo 8 caracteres).", ok: false });
     setState({ busy: false, error: "", ok: true });
-    await supabase.auth.signOut();
+    // Cierra todas las sesiones de la cuenta en todos los dispositivos.
+    await supabase.auth.signOut({ scope: "global" });
     setTimeout(() => nav("/ingresar", { replace: true }), 2500);
   }
   return (

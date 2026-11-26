@@ -15,8 +15,9 @@ Sin `SUPABASE_SERVICE_ROLE_KEY` (secreto de Lovable) las funciones del servidor 
 - Ingresos y comisiones (admin): /admin/ingresos (`GET /admin/revenue`, filtros fecha/estado; `POST /admin/revenue/:bookingId/refund`).
 - Quejas y sugerencias (/app/quejas, /admin/quejas), mensajería privada (chat), calendario mes/semana/día (intercambios + clases personalizadas, zona America/Mexico_City).
 
-## Roles
-`user_roles` (admin/moderator/user). Admin automático solo para `alejandroortizcalles@gmail.com` (correo confirmado) — migración 0005. Rutas del servidor con nivel open/auth/staff/admin validado en `router.server.js`.
+## Autenticación y roles
+Supabase Auth (Lovable Cloud), correo + contraseña. Registro sin enlace de confirmación cuando «Auto-confirm email» está activo en Lovable (More → Users → Settings → Email); el código entra de inmediato si signUp devuelve sesión. «¿Olvidaste tu contraseña?» (/recuperar) envía enlace; /restablecer solo se habilita desde ese enlace (PASSWORD_RECOVERY) y al guardar cierra sesión en todos los dispositivos. Bloqueo por 5 intentos fallidos e inactividad de 30 min se conservan.
+`user_roles` (admin/moderator/user): los usuarios solo pueden leerlo. El rol admin NO se asigna por correo (migración 0006 deja `tl_grant_owner_admin` vacío); se otorga con `select public.tl_promote_admin('correo');` desde el editor SQL de Lovable (no ejecutable por usuarios). Cambios de rol en la app: solo un admin, vía `/admin/user/:id/role`.
 
 ## Pendiente manual
 Ver `/app/frontend/CONFIGURACION_PAGOS.md` (aplicar SQL 0005 en Lovable, secretos de Stripe, webhook).

@@ -5,6 +5,11 @@ import { setAuthRecord } from "./pb";
 import { tlLoginCheck, tlLoginResult } from "./tl-api.functions";
 
 const Ctx = createContext(null);
+
+// ¿La página se abrió desde el enlace de recuperación del correo? Se captura al cargar el módulo,
+// antes de que el cliente de autenticación limpie la URL, y también al recibir PASSWORD_RECOVERY.
+let recoveryFlag = typeof window !== "undefined" && (/type=recovery/.test(window.location.hash) || /[?&]type=recovery/.test(window.location.search));
+export const openedFromRecoveryLink = () => recoveryFlag;
 export const useAuth = () => useContext(Ctx);
 
 // Perfil + rol de la persona con sesión (el rol vive en una tabla aparte y protegida).
@@ -23,7 +28,7 @@ function authError(error) {
   const msg = String(error?.message || "");
   const e = new Error(msg);
   if (/banned/i.test(msg)) { e.status = 403; e.message = "Tu cuenta está suspendida. Contacta con la comunidad."; }
-  else if (/not confirmed/i.test(msg)) { e.status = 403; e.message = "Confirma tu correo antes de entrar: revisa tu bandeja (y la carpeta de spam) y abre el enlace que te enviamos."; }
+  else if (/not confirmed/i.test(msg)) { e.status = 403; e.message = "Tu cuenta aún no está activada. Usa «¿Olvidaste tu contraseña?»: al abrir el enlace que te enviaremos, tu cuenta quedará activada y podrás elegir tu contraseña."; }
   else if (/invalid login credentials/i.test(msg)) { e.status = 400; e.message = "Correo o contraseña incorrectos."; }
   else if (/rate limit|too many/i.test(msg)) { e.status = 429; e.message = "Demasiados intentos. Espera unos minutos antes de volver a intentarlo."; }
   else if (/already registered|already exists/i.test(msg)) { e.status = 400; e.message = "Ese correo ya tiene una cuenta o no es válido."; }
@@ -54,6 +59,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let live = true;
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") recoveryFlag = true;
       if (!live) return;
       if (event === "TOKEN_REFRESHED" && session && userRef.current?.id === session.user.id) { setAuthRecord(undefined, session.access_token); return; }
       setTimeout(() => { if (live) apply(session); }, 0);
@@ -94,9 +100,10 @@ export function AuthProvider({ children }) {
     return rec;
   }, [apply]);
 
-  // Con verificación de correo: la cuenta queda creada y la persona debe abrir el enlace del correo.
+  // Registro sin enlace de confirmación: con «Auto-confirm email» activo en Lovable Cloud, signUp devuelve
+  // la sesión y la persona entra de inmediato. Si la confirmación sigue activa, se muestra el aviso del correo.
   const register = useCallback(async ({ name, email, password }) => {
-    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { name }, emailRedirectTo: window.location.origin + "/app/perfil" } });
+    const { data, error } = await supabase.auth.signUp({ email: String(email || "").trim().toLowerCase(), password, options: { data: { name }, emailRedirectTo: window.location.origin + "/app/perfil" } });
     if (error) throw authError(error);
     if (data.session) { await apply(data.session); return { confirmed: true }; }
     return { confirmed: false };
