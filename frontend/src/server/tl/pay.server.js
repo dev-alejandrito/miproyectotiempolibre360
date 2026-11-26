@@ -5,6 +5,7 @@
 // No se guardan datos de tarjetas: el pago ocurre en la página segura de Stripe Checkout.
 import { getRequest } from "@tanstack/react-start/server";
 import { db, q, fail, str, isUuid, displayName, membersMap, audit, notify, settings, TLError } from "./core.server.js";
+import { onPaymentConfirmed, onPaymentChanged, onBookingChanged, kickJobs } from "./integrations.server.js";
 
 const API = "https://api.stripe.com/v1";
 export const PAY_LABEL = { pending: "Pago pendiente", paid: "Pagado", refunding: "Reembolso en proceso", refunded: "Reembolsado", expired: "Pago expirado", failed: "Pago fallido" };
@@ -188,6 +189,9 @@ export async function markPaid(session) {
   else await q(db.from("private_bookings").update({ history: hist, updated: now }).eq("id", b.id));
   await notify(b.instructor, "private_class", "Pago confirmado · " + b.code, "Recibirás $" + Number(p.instructor_net_mxn).toFixed(2) + " MXN en tu cuenta de Stripe.", "/app/clases-particulares");
   await notify(b.student, "private_class", "Pago confirmado · " + b.code, "Tu clase «" + b.title + "» quedó confirmada.", "/app/clases-particulares");
+  // Recibos por Gmail, fila en Google Sheets e invitación de Google Calendar (solo con pago confirmado).
+  await onPaymentConfirmed(p.id);
+  await kickJobs(4000);
   return true;
 }
 export async function paySync(me, bookingId) {
@@ -222,6 +226,7 @@ export async function refundBooking(actor, bookingId, reason) {
   await audit(actor, "class_refund", p.booking, p.booking_code + " · " + r.id + " · $" + (Number(r.amount || 0) / 100).toFixed(2) + " MXN");
   await notify(p.student, "private_class", "Reembolso registrado · " + p.booking_code, "Stripe devolverá $" + (Number(r.amount || 0) / 100).toFixed(2) + " MXN a tu método de pago.", "/app/clases-particulares");
   await notify(p.instructor, "private_class", "Clase reembolsada · " + p.booking_code, str(reason, 160), "/app/clases-particulares");
+  await onPaymentChanged(p.id);
   return true;
 }
 export async function adminRefund(me, bookingId, b) {
@@ -235,6 +240,8 @@ export async function adminRefund(me, bookingId, b) {
     const hist = (Array.isArray(bk.history) ? bk.history : []).concat([{ at: now, by: "Administración", action: "Reembolso registrado", from: bk.status, to: "cancelled", note: reason }]).slice(-100);
     await q(db.from("private_bookings").update({ status: "cancelled", updated: now, history: hist }).eq("id", bk.id));
   }
+  await onBookingChanged(bk.id);
+  await kickJobs(3000);
   return { ok: true };
 }
 

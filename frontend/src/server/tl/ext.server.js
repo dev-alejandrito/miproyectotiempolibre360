@@ -2,6 +2,7 @@
 // Estos datos son privados: solo se leen y escriben desde aquí, con la identidad verificada.
 import { db, q, fail, str, norm, displayName, randomString, isUuid, isStaff, getMember, membersMap, audit, notify, notifyStaff, signFiles, BUCKET } from "./core.server.js";
 import { publicUrl } from "./profile-url.server.js";
+import { adminAlert, kickJobs, onBookingChanged } from "./integrations.server.js";
 import { splitAmount, commissionPct, paymentsFor, payView, refundBooking, instructorReady, paymentsEnabled } from "./pay.server.js";
 
 const MS = 60000;
@@ -199,6 +200,8 @@ export async function fbCreate(me, b) {
   const code = "QS-" + randomString(6, "ABCDEFGHJKLMNPQRSTUVWXYZ23456789");
   const r = await q(db.from("feedback_reports").insert({ code, member: me.id, category: cat, subject, description: desc, related_member: str(b.related_member, 100), related_exchange: relEx || null, status: "new", thread: [], files }).select("id").single());
   await notifyStaff("feedback", "Nueva queja o sugerencia " + code, FB_CATS[cat] + ": " + subject.slice(0, 80), "/admin/quejas");
+  await adminAlert("feedback:" + r.id, "Nueva queja o sugerencia (" + FB_CATS[cat] + ")", ["Folio: " + code, "Enviada por: " + displayName(me.name), "Asunto: " + subject.slice(0, 150)], "/admin/quejas");
+  await kickJobs(3000);
   return { ok: true, code, id: r.id };
 }
 export async function fbList(me) {
@@ -408,7 +411,9 @@ export async function bkAction(me, id, action, b) {
   if (!upd.length) fail("Esta clase cambió mientras tanto. Vuelve a cargar.", 409);
   await notify(other, "private_class", rule.msg + " · " + rec.code, rec.title, "/app/clases-particulares");
   if (rec.conversation) await systemMessage(rec.conversation, me.id, rule.msg + " · " + rec.code + (pay ? " — Acuerdo de pago: " + pay : ""));
-  if (action === "dispute") { await notifyStaff("private_class", "Disputa en clase particular " + rec.code, reason.slice(0, 100), "/admin/clases-particulares"); await audit(me, "private_dispute", rec.id, rec.code); }
+  if (action === "dispute") { await notifyStaff("private_class", "Disputa en clase particular " + rec.code, reason.slice(0, 100), "/admin/clases-particulares"); await audit(me, "private_dispute", rec.id, rec.code); await adminAlert("private-dispute:" + rec.id + ":" + patch.updated, "Disputa en una clase personalizada" + (online ? " pagada en línea" : ""), ["Reservación: " + rec.code, "Clase: " + rec.title, "Abierta por: " + displayName(me.name) + (isIns ? " (instructor)" : " (alumno)"), "Motivo: " + reason.slice(0, 300)], "/admin/clases-particulares"); }
+  await onBookingChanged(rec.id);
+  await kickJobs(3000);
   return { ok: true, status: rule.to };
 }
 export async function privateAdminList(me, status) {
@@ -428,6 +433,8 @@ export async function bkResolve(me, id, b) {
   if (note.length < 5) fail("Escribe la resolución (mínimo 5 caracteres).");
   if (st === "cancelled" && rec.payment_method === "stripe") await refundBooking(me, rec.id, "Disputa resuelta: " + note);
   await q(db.from("private_bookings").update({ status: st, updated: new Date().toISOString(), history: pushHist(rec.history, { at: new Date().toISOString(), by: "Administración", action: "Disputa resuelta: " + BK_LABEL[st], from: "disputed", to: st, note }) }).eq("id", rec.id));
+  await onBookingChanged(rec.id);
+  await kickJobs(3000);
   await audit(me, "private_resolve", rec.id, rec.code + " → " + st);
   for (const m of [rec.instructor, rec.student]) await notify(m, "private_class", "Disputa resuelta · " + rec.code, note.slice(0, 160), "/app/clases-particulares");
   return { ok: true };

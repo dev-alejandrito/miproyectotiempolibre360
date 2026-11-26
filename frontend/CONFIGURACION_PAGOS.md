@@ -44,3 +44,13 @@ Cancelación antes del inicio o resolución de disputa como «cancelada» → re
 2. Agrega en Lovable → Cloud → Secrets: `EMERGENT_LLM_KEY` (tu clave personal de Emergent) y `GMAIL_CONNECTION_ID = 16bd2a94-852c-47f3-b40d-d46e84c126b5`.
    La autorización OAuth de Gmail la guarda Emergent; la app solo pide un token temporal desde el servidor.
 3. Remitente: la cuenta conectada (alejandroortizcalles@gmail.com). Los avisos se envían al iniciar sesión o al abrir el panel; si Gmail falla se reintentan (máx. 5).
+
+## Recibos, avisos al administrador, Google Calendar y Google Sheets
+1. Aplica `drizzle/migrations/0008_integraciones_google.sql` (cola `integration_jobs` con control de duplicados y registro de errores).
+2. Agrega en Lovable → Cloud → Secrets (además de `EMERGENT_LLM_KEY` y `GMAIL_CONNECTION_ID`):
+   - `GCAL_CONNECTION_ID = b3d98eb7-ed82-48b8-b2b2-040e0df02b6d`
+   - `GOOGLE_CALENDAR_ID = b7a688892af130a7f0765073a0fedc1ab2ebe98b40bacc9d1342ee28293b540d@group.calendar.google.com` (calendario «TIEMPO LIBRE 360 — Clases»)
+   - `GSHEETS_CONNECTION_ID = 01aabe43-ea46-4194-a6b0-947531b3e9d1`
+   - `COMMISSIONS_SHEET_ID = 1JP1RMGWvKggxmnm1Ial1pYS-G9WfaLUnsmiJ93Bg1ZQ` (hoja «TIEMPO LIBRE 360 — Comisiones»: https://docs.google.com/spreadsheets/d/1JP1RMGWvKggxmnm1Ial1pYS-G9WfaLUnsmiJ93Bg1ZQ)
+   - Opcional: `APP_PUBLIC_URL` (para enlaces completos al panel en los avisos) y `ADMIN_ALERT_EMAIL` (por defecto alejandroortizcalles@gmail.com).
+3. Prueba manual real (opcional): `LIVE_GOOGLE=1 npx vitest run src/test/integrations.live.manual.test.ts` (envía 2 correos PRUEBA, crea/cancela 1 evento y agrega/actualiza 1 fila que después debes borrar).

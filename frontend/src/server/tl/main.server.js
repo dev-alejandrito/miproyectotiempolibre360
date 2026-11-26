@@ -5,6 +5,7 @@ import {
   settings, audit, notify, notifyStaff, wallet, move, walletView, rolesFor,
 } from "./core.server.js";
 import { profileExtras, publicUrl } from "./profile.server.js";
+import { adminAlert, kickJobs } from "./integrations.server.js";
 
 // ---------- pasaporte e insignias ----------
 export async function stats(memberId) {
@@ -436,6 +437,8 @@ export async function exchangeAction(me, id, action, b) {
     await evt(ex.id, me.id, "dispute", reason);
     after.push([other, "dispute", "Se abrió un conflicto en «" + sname + "»", "El equipo de moderación lo revisará. Tus créditos siguen reservados.", "/app/intercambios"]);
     after.push(["__staff__", "dispute", "Nuevo conflicto por revisar", "«" + sname + "» — " + reason.slice(0, 120), "/admin/reportes"]);
+    await adminAlert("exchange-dispute:" + ex.id, "Disputa en un intercambio", ["Intercambio: «" + sname + "»", "Abierta por: " + displayName(me.name), "Motivo: " + reason.slice(0, 300)], "/admin/reportes");
+    await kickJobs(3000);
   } else if (action === "resolve") {
     if (!staff) fail("Solo la moderación puede resolver conflictos.", 403);
     if (party) fail("No puedes resolver un conflicto en el que participas. Otra persona del equipo debe revisarlo.", 403);

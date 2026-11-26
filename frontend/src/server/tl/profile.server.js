@@ -2,6 +2,7 @@
 // Cada persona solo modifica su propio perfil; correo, contraseña, rol, permisos y verificación NO se cambian aquí.
 import { db, q, fail, str, isUuid, displayName, membersMap, getMember, audit, notify, notifyStaff, signFiles } from "./core.server.js";
 import { takeFiles } from "./ext.server.js";
+import { adminAlert, kickJobs } from "./integrations.server.js";
 
 import { PROFILE_BUCKET, publicUrl } from "./profile-url.server.js";
 export { PROFILE_BUCKET, publicUrl };
@@ -108,6 +109,8 @@ export async function verCreate(me, b) {
   const { data, error } = await db.from("account_verifications").insert({ member: me.id, status: "pending", message, files, history: [{ at: now, by: me.name, action: "Solicitud enviada", to: "pending" }] }).select("id").single();
   if (error) { if (error.code === "23505") fail("Ya tienes una solicitud en revisión."); throw error; }
   await notifyStaff("verification", "Nueva solicitud de verificación de cuenta", displayName(me.name), "/admin/verificaciones");
+  await adminAlert("verification:" + data.id, "Nueva solicitud de verificación de cuenta", ["Solicitante: " + displayName(me.name), "Evidencias adjuntas: " + files.length], "/admin/verificaciones");
+  await kickJobs(3000);
   return { ok: true, id: data.id };
 }
 export async function verAdminList(status) {

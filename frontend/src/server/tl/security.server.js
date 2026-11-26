@@ -108,5 +108,6 @@ export async function flushSecurity(limit = 5) {
 }
 // Con tope de tiempo: si Gmail tarda, la petición del usuario no espera.
 export function flushSoon(ms = 4000) {
-  return Promise.race([flushSecurity(5), new Promise((r) => setTimeout(() => r({ timeout: true }), ms))]).catch(() => ({}));
+  const both = import("./integrations.server.js").then((m) => Promise.all([flushSecurity(5), m.runJobs(6)]));
+  return Promise.race([both, new Promise((r) => setTimeout(() => r({ timeout: true }), ms))]).catch(() => ({}));
 }
