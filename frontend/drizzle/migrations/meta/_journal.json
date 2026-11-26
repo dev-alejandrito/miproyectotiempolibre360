@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1795473902001,
+      "tag": "0000_tiempo_libre_360_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795473930772,
+      "tag": "0001_evidencias_storage_policies",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795475821944,
+      "tag": "0002_harden_trigger_functions",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795476030185,
+      "tag": "0003_restrict_site_settings_read",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795564702150,
+      "tag": "0004_migration",
+      "breakpoints": true
+    }
+  ]
+}

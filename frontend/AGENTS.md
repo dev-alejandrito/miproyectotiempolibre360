@@ -1,0 +1,41 @@
+<!-- LOVABLE:BEGIN -->
+> [!IMPORTANT]
+> This project is connected to [Lovable](https://lovable.dev). Avoid rewriting
+> published git history — force pushing, or rebasing/amending/squashing commits
+> that are already pushed — as it rewrites history on Lovable's side and the
+> user will likely lose their project history.
+>
+> Commits you push to the connected branch sync back to Lovable and show up in
+> the editor, so keep the branch in a working state.
+
+## What Lovable manages
+
+Rules outside this block are the project's own. Change the pieces below in
+Lovable, not by hand. With the [Lovable MCP](https://mcp.lovable.dev)
+connected, `send_message` asks Lovable to do it; otherwise ask the user to
+use the editor.
+
+- **Database.** Do not add or edit `supabase/migrations/` or `drizzle/`.
+  Ask Lovable to change the schema.
+- **Generated files.** Do not edit a file whose header says it is automatically
+  generated.
+- **AI gateway.** Keep model calls on Lovable's gateway, and keep
+  `LOVABLE_API_KEY` out of browser code.
+- **Connectors.** Lovable provides native connectors. `list_connectors` shows
+  which are enabled; `add_connector` only returns the dashboard link. When a
+  connector is enabled, calls go through the connector gateway and need
+  `LOVABLE_API_KEY`. When Lovable does not provide one, users can bring their
+  own key and store it in Secrets.
+- **Secrets.** Lovable manages them. Do not put secret values in the repo.
+<!-- LOVABLE:END -->
+
+## Project rules (TIEMPO LIBRE 360)
+
+- Pages under `src/pages/**` are the original JSX screens; keep them and their design classes in `src/styles.css`. Routes in `src/routes/*` are thin wrappers. Why: the owner requires the original design and structure to stay unchanged.
+- Pages import routing only from `@/lib/router` (React Router–shaped shim over TanStack Router). Why: lets the original screens run unchanged on TanStack.
+- All business logic (credits, exchanges, verification, feedback, private classes, chat) runs on the server in `src/server/tl/*.server.js`, reached through the single `tlApi` server function (`src/lib/tl-api.functions.ts`, client helper `api()` in `src/lib/pb.js`). The server checks the session and roles on every call. Why: ports the original PocketBase hooks with identical rules and keeps privileged tables out of the browser.
+- Private feature tables (verification requests, feedback reports, private bookings) have no browser access; chat messages are readable only by the two participants and written only through the server. Why: users may only see their own data and conversations.
+- Uploaded evidence goes to the private `evidencias` bucket under `<user id>/...`; it is shown only through short-lived signed links created by the server. Why: evidence files are private.
+- Roles live only in `public.user_roles`; the owner admin role is granted by a database function after that email is confirmed. Why: prevents privilege escalation.
+- Private classes: the instructor chooses online payment (Stripe Connect destination charges, 10% platform commission via application_fee_amount, 90% to the instructor) or direct payment (no commission). Never collect card data in the app, never mark a class as paid without Stripe confirmation (signed webhook or server-side retrieval), and keep test mode unless STRIPE_LIVE_ENABLED=1. Why: owner requirement (updated).
+- Account password fields use the shared PasswordInput control, preserving native input props and independent visibility state. Why: keeps login, registration and password changes consistent without changing authentication.
